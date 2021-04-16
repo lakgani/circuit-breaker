@@ -24,7 +24,7 @@ describe("CircuitBreaker", () => {
     const actionMock = jest.fn().mockReturnValue(Promise.reject("failed"));
     const cb = new CircuitBreaker(actionMock);
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < CircuitBreakerConfig.FAILURE_THRESHOLD; i++) {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
@@ -38,13 +38,17 @@ describe("CircuitBreaker", () => {
     const actionMock = jest.fn().mockReturnValue(Promise.reject("failed"));
     const cb = new CircuitBreaker(actionMock);
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < CircuitBreakerConfig.FAILURE_THRESHOLD; i++) {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
     actionMock.mockReturnValue(Promise.resolve("success"));
     jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD);
-    for (let i = 0; i < 4; i++) {
+    for (
+      let i = 0;
+      i < CircuitBreakerConfig.HALF_OPEN_ALLOWED_CONNECTION_COUNT;
+      i++
+    ) {
       await expect(cb.fire()).resolves.toBe("success");
     }
     await expect(cb.fire()).resolves.toBe("success");
@@ -53,7 +57,7 @@ describe("CircuitBreaker", () => {
     jest.useFakeTimers();
     const actionMock = jest.fn().mockReturnValue(Promise.reject("failed"));
     const cb = new CircuitBreaker(actionMock);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < CircuitBreakerConfig.FAILURE_THRESHOLD; i++) {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
@@ -69,7 +73,7 @@ describe("CircuitBreaker", () => {
     jest.useFakeTimers();
     const actionMock = jest.fn().mockReturnValue(Promise.reject("failed"));
     const cb = new CircuitBreaker(actionMock);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < CircuitBreakerConfig.FAILURE_THRESHOLD; i++) {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
@@ -85,7 +89,7 @@ describe("CircuitBreaker", () => {
     jest.useFakeTimers();
     const actionMock = jest.fn().mockReturnValue(Promise.reject("failed"));
     const cb = new CircuitBreaker(actionMock);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < CircuitBreakerConfig.FAILURE_THRESHOLD; i++) {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
