@@ -1,43 +1,94 @@
 const FAILURE_THRESHOLD = 10;
-const COOLDOWN_PERIOD = 2000;
+const CIRCUIT_OPEN_PERIOD = 2000;
+const CIRCUIT_HALF_OPEN_PERIOD = 2000;
+const HALF_OPEN_ALLOWED_CONNECTION_COUNT = 5;
 
 class CircuitBreaker {
   constructor(action) {
     this._action = action;
-    this.isDownstreamAvailable = true;
+    this.totalCallsCount = 0;
+    this.totalSuccessCallsCount = 0;
     this.totalFailedCallsCount = 0;
+
     this.failedCallsCount = 0;
-    this.cooldownTimer = null;
+    this.isCircuitOpen = false;
+    this.circuitOpenResetTimer = null;
+
+    this.circuitHalfOpenCallCount = 0;
+    this.circuitHalfOpenCallSuccessCount = 0;
+    this.circuitHalfOpenResetTimer = null;
+    this.isCircuitHalfOpen = false;
   }
 
   handleFailure() {
     this.totalFailedCallsCount++;
     this.failedCallsCount++;
-    this.showStatistics();
-    if (this.failedCallsCount > FAILURE_THRESHOLD) {
-      this.isDownstreamAvailable = false;
-      this.resetAfterCooldown();
+    // this.showStatistics();
+    if (this.isCircuitHalfOpen) {
+      this.openCircuit();
+      return;
+    }
+    if (this.failedCallsCount >= FAILURE_THRESHOLD) {
+      this.openCircuit();
     }
   }
 
-  resetAfterCooldown() {
-    if (this.cooldownTimer) {
+  openCircuit() {
+    if (this.isCircuitOpen && !this.isCircuitHalfOpen) {
       return;
     }
-    this.cooldownTimer = setTimeout(() => {
-      this.failedCallsCount = 0;
-      this.isDownstreamAvailable = true;
-      this.cooldownTimer = null;
-      console.log("Cooldown period completed");
-    }, COOLDOWN_PERIOD);
+    this.isCircuitOpen = true;
+    this.isCircuitHalfOpen = false;
+    this.circuitHalfOpenCallCount = 0;
+    this.circuitHalfOpenCallSuccessCount = 0;
+
+    this.circuitOpenResetTimer = setTimeout(() => {
+      this.isCircuitHalfOpen = true;
+      this.circuitHalfOpenResetTimer = setTimeout(() => {
+        this.closeCircuit();
+      }, CIRCUIT_HALF_OPEN_PERIOD);
+    }, CIRCUIT_OPEN_PERIOD);
+  }
+
+  closeCircuit() {
+    this.isCircuitOpen = false;
+    this.failedCallsCount = 0;
+
+    this.isCircuitHalfOpen = false;
+    this.circuitHalfOpenCallCount = 0;
+    this.circuitHalfOpenCallSuccessCount = 0;
+    clearTimeout(this.circuitHalfOpenResetTimer);
   }
 
   async fire(...params) {
-    if (!this.isDownstreamAvailable) {
-      throw new Error("Downstream is unresponsive, Try after sometime.");
+    let isHalfOpenCheckCall = false;
+    this.totalCallsCount++;
+    if (this.isCircuitOpen) {
+      if (this.isCircuitHalfOpen) {
+        this.circuitHalfOpenCallCount++;
+        isHalfOpenCheckCall = true;
+        if (
+          this.circuitHalfOpenCallCount > HALF_OPEN_ALLOWED_CONNECTION_COUNT
+        ) {
+          throw new Error("Downstream requests are half open, checking.");
+        }
+      } else {
+        throw new Error("Downstream is unresponsive, Try after sometime.");
+      }
     }
     try {
-      return await this._action(...params);
+      const resp = await this._action(...params);
+      this.totalSuccessCallsCount++;
+      if (isHalfOpenCheckCall) {
+        this.circuitHalfOpenCallSuccessCount++;
+        if (
+          this.circuitHalfOpenCallSuccessCount >=
+          HALF_OPEN_ALLOWED_CONNECTION_COUNT
+        ) {
+          this.closeCircuit();
+        }
+      }
+      return resp;
     } catch (e) {
       this.handleFailure();
       throw e;
@@ -46,7 +97,13 @@ class CircuitBreaker {
 
   showStatistics() {
     console.log(
-      `Total Failures: ${this.totalFailedCallsCount} \t\t | Current period Failures: ${this.failedCallsCount}  \t\t | Downstream available: ${this.isDownstreamAvailable}`
+      `Total calls: ${this.totalCallsCount} \t\t | Total Successful Calls: ${this.totalSuccessCallsCount} \t\t | Total Failures: ${this.totalFailedCallsCount}`
+    );
+    console.log(
+      `Current period Failures: ${this.failedCallsCount}  \t\t | Circuit Open: ${this.isCircuitOpen}`
+    );
+    console.log(
+      `Circuit half open: ${this.isCircuitHalfOpen}  \t\t | Cicuit Half Open Calls: ${this.circuitHalfOpenCallCount} \t\t | Cicuit Half Open Calls Success: ${this.circuitHalfOpenCallSuccessCount}`
     );
   }
 }
