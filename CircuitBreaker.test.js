@@ -3,12 +3,22 @@ const action = require("./action");
 
 const cb = new CircuitBreaker(action);
 
-for (let i = 0; i < 10; i++) {
+let callCount = 0;
+
+const timer = setInterval(() => {
+  if (callCount >= 1000) {
+    clearInterval(timer);
+  }
+  callCount++;
+
   cb.fire()
     .then((resp) => {
-      console.log(`call for instance ${i} completed successfully`);
+      console.log(`call for instance ${callCount} completed successfully`);
     })
     .catch((e) => {
-      console.log(`call for instance ${i} failed with error`, e);
+      console.log(
+        `call for instance ${callCount} failed with error`,
+        e.message
+      );
     });
-}
+}, 1000);
