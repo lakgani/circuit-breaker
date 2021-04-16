@@ -1,14 +1,11 @@
 class CircuitBreaker {
+  constructor(action) {
+    this.action = action;
+  }
 
-    constructor(action) {
-        this.action = action;
-    }
-
-    fire(...params) {
-        return this.action(...params);
-    }
-
+  fire(...params) {
+    return this.action(...params);
+  }
 }
-
 
 module.exports = CircuitBreaker;
