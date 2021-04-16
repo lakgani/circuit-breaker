@@ -1,7 +1,4 @@
-const FAILURE_THRESHOLD = 10;
-const CIRCUIT_OPEN_PERIOD = 2000;
-const CIRCUIT_HALF_OPEN_PERIOD = 2000;
-const HALF_OPEN_ALLOWED_CONNECTION_COUNT = 5;
+const config = require("./CircuitBreakerConfig");
 
 class CircuitBreaker {
   constructor(action) {
@@ -28,7 +25,7 @@ class CircuitBreaker {
       this.openCircuit();
       return;
     }
-    if (this.failedCallsCount >= FAILURE_THRESHOLD) {
+    if (this.failedCallsCount >= config.FAILURE_THRESHOLD) {
       this.openCircuit();
     }
   }
@@ -46,8 +43,8 @@ class CircuitBreaker {
       this.isCircuitHalfOpen = true;
       this.circuitHalfOpenResetTimer = setTimeout(() => {
         this.closeCircuit();
-      }, CIRCUIT_HALF_OPEN_PERIOD);
-    }, CIRCUIT_OPEN_PERIOD);
+      }, config.CIRCUIT_HALF_OPEN_PERIOD);
+    }, config.CIRCUIT_OPEN_PERIOD);
   }
 
   closeCircuit() {
@@ -68,7 +65,8 @@ class CircuitBreaker {
         this.circuitHalfOpenCallCount++;
         isHalfOpenCheckCall = true;
         if (
-          this.circuitHalfOpenCallCount > HALF_OPEN_ALLOWED_CONNECTION_COUNT
+          this.circuitHalfOpenCallCount >
+          config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
         ) {
           throw new Error("Downstream requests are half open, checking.");
         }
@@ -83,7 +81,7 @@ class CircuitBreaker {
         this.circuitHalfOpenCallSuccessCount++;
         if (
           this.circuitHalfOpenCallSuccessCount >=
-          HALF_OPEN_ALLOWED_CONNECTION_COUNT
+          config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
         ) {
           this.closeCircuit();
         }

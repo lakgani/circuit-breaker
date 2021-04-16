@@ -1,7 +1,8 @@
 const CircuitBreaker = require("./CircuitBreaker");
+const CircuitBreakerConfig = require("./CircuitBreakerConfig");
 
 describe("CircuitBreaker", () => {
-  it("should reflect the action function return", async () => {
+  it("should reflect the action function return status on start", async () => {
     jest.useFakeTimers();
     const actionMock = jest
       .fn()
@@ -12,7 +13,10 @@ describe("CircuitBreaker", () => {
 
     await expect(cb.fire()).resolves.toBe("success");
     await expect(cb.fire()).rejects.toBe("failed");
-    jest.advanceTimersByTime(4000);
+    jest.advanceTimersByTime(
+      CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD +
+        CircuitBreakerConfig.CIRCUIT_HALF_OPEN_PERIOD
+    );
     await expect(cb.fire()).resolves.toBe("success");
   });
 
@@ -39,7 +43,7 @@ describe("CircuitBreaker", () => {
     }
 
     actionMock.mockReturnValue(Promise.resolve("success"));
-    jest.advanceTimersByTime(2000);
+    jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD);
     for (let i = 0; i < 4; i++) {
       await expect(cb.fire()).resolves.toBe("success");
     }
@@ -53,7 +57,7 @@ describe("CircuitBreaker", () => {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
-    jest.advanceTimersByTime(2000);
+    jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD);
     await expect(cb.fire()).rejects.toBe("failed");
 
     await expect(cb.fire()).rejects.toEqual(
@@ -69,7 +73,10 @@ describe("CircuitBreaker", () => {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
-    jest.advanceTimersByTime(4000);
+    jest.advanceTimersByTime(
+      CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD +
+        CircuitBreakerConfig.CIRCUIT_HALF_OPEN_PERIOD
+    );
     actionMock.mockReturnValue(Promise.resolve("success"));
     await expect(cb.fire()).resolves.toBe("success");
   });
@@ -82,10 +89,10 @@ describe("CircuitBreaker", () => {
       await expect(cb.fire()).rejects.toBe("failed");
     }
 
-    jest.advanceTimersByTime(2000);
+    jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_OPEN_PERIOD);
     actionMock.mockReturnValue(Promise.resolve("success"));
     await expect(cb.fire()).resolves.toBe("success");
-    jest.advanceTimersByTime(2000);
+    jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_HALF_OPEN_PERIOD);
     await expect(cb.fire()).resolves.toBe("success");
   });
 });
