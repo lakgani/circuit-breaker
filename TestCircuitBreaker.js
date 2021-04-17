@@ -20,7 +20,7 @@ const timer = setInterval(() => {
   cbPromises.push(
     cb
       .fire()
-      .then((resp) => {
+      .then(() => {
         console.log(
           `call for instance ${currentIntance} completed successfully`
         );
