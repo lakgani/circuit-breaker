@@ -1,0 +1,8 @@
+default:
+    image: node:14-buster
+
+test-job:
+  stage: test
+  script:
+    - npm install
+    - npm run ci-cd:test
