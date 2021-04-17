@@ -67,6 +67,12 @@ describe("CircuitBreaker", () => {
     await expect(cb.fire()).rejects.toEqual(
       new Error("Downstream is unresponsive, Try after sometime.")
     );
+
+    jest.advanceTimersByTime(CircuitBreakerConfig.CIRCUIT_HALF_OPEN_PERIOD);
+
+    await expect(cb.fire()).rejects.toEqual(
+      new Error("Downstream is unresponsive, Try after sometime.")
+    );
   });
 
   it("should close circuit when no calls happen during half open circuit", async () => {

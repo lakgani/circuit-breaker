@@ -22,10 +22,12 @@ class CircuitBreaker {
     this.failedCallsCount++;
     // this.showStatistics();
     if (this.isCircuitHalfOpen) {
+      console.log("opening circuit due to failure during half open test call");
       this.openCircuit();
       return;
     }
     if (this.failedCallsCount >= config.FAILURE_THRESHOLD) {
+      console.log("opening circuit due to threshold cross");
       this.openCircuit();
     }
   }
@@ -35,13 +37,19 @@ class CircuitBreaker {
       return;
     }
     this.isCircuitOpen = true;
+    this.failedCallsCount = 0;
+
     this.isCircuitHalfOpen = false;
     this.circuitHalfOpenCallCount = 0;
     this.circuitHalfOpenCallSuccessCount = 0;
+    clearInterval(this.circuitHalfOpenResetTimer);
 
     this.circuitOpenResetTimer = setTimeout(() => {
       this.isCircuitHalfOpen = true;
       this.circuitHalfOpenResetTimer = setTimeout(() => {
+        console.log(
+          "Closing Circuit as timout done during half open circuit succeded"
+        );
         this.closeCircuit();
       }, config.CIRCUIT_HALF_OPEN_PERIOD);
     }, config.CIRCUIT_OPEN_PERIOD);
@@ -68,21 +76,30 @@ class CircuitBreaker {
           this.circuitHalfOpenCallCount >
           config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
         ) {
+          this.totalFailedCallsCount++;
           throw new Error("Downstream requests are half open, checking.");
         }
       } else {
+        this.totalFailedCallsCount++;
         throw new Error("Downstream is unresponsive, Try after sometime.");
       }
     }
     try {
       const resp = await this._action(...params);
       this.totalSuccessCallsCount++;
-      if (isHalfOpenCheckCall) {
+      if (this.isCircuitHalfOpen && isHalfOpenCheckCall) {
         this.circuitHalfOpenCallSuccessCount++;
+        console.log(
+          "Test call during half open circuit succeeded",
+          this.circuitHalfOpenCallSuccessCount
+        );
         if (
           this.circuitHalfOpenCallSuccessCount >=
           config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
         ) {
+          console.log(
+            "Closing Circuit as test calls during half open circuit succeded"
+          );
           this.closeCircuit();
         }
       }
