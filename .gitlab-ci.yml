@@ -1,15 +1,16 @@
 default:
     image: node:14-buster
 
+before_script:
+  - npm install
+
+cache:
+  paths:
+    - node_modules/
+
 stages:
-    - npm-install
     - lint
     - test
-
-build-job:
-  stage: npm-install
-  script:
-    - npm install
 
 lint-job:
   stage: lint
