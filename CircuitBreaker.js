@@ -17,21 +17,6 @@ class CircuitBreaker {
     this.isCircuitHalfOpen = false;
   }
 
-  handleFailure() {
-    this.totalFailedCallsCount++;
-    this.failedCallsCount++;
-    // this.showStatistics();
-    if (this.isCircuitHalfOpen) {
-      console.log("opening circuit due to failure during half open test call");
-      this.openCircuit();
-      return;
-    }
-    if (this.failedCallsCount >= config.FAILURE_THRESHOLD) {
-      console.log("opening circuit due to threshold cross");
-      this.openCircuit();
-    }
-  }
-
   openCircuit() {
     if (this.isCircuitOpen && !this.isCircuitHalfOpen) {
       return;
@@ -58,16 +43,12 @@ class CircuitBreaker {
   closeCircuit() {
     this.isCircuitOpen = false;
     this.failedCallsCount = 0;
-
-    this.isCircuitHalfOpen = false;
-    this.circuitHalfOpenCallCount = 0;
-    this.circuitHalfOpenCallSuccessCount = 0;
-    clearTimeout(this.circuitHalfOpenResetTimer);
+    clearInterval(this.circuitHalfOpenResetTimer);
   }
 
-  async fire(...params) {
-    let isHalfOpenCheckCall = false;
+  preFireRoutine() {
     this.totalCallsCount++;
+    let isHalfOpenCheckCall = false;
     if (this.isCircuitOpen) {
       if (this.isCircuitHalfOpen) {
         this.circuitHalfOpenCallCount++;
@@ -84,28 +65,52 @@ class CircuitBreaker {
         throw new Error("Downstream is unresponsive, Try after sometime.");
       }
     }
+    return isHalfOpenCheckCall;
+  }
+
+  postFireSuccessRoutine(isHalfOpenCheckCall) {
+    this.totalSuccessCallsCount++;
+    if (this.isCircuitHalfOpen && isHalfOpenCheckCall) {
+      this.circuitHalfOpenCallSuccessCount++;
+      console.log(
+        "Test call during half open circuit succeeded",
+        this.circuitHalfOpenCallSuccessCount
+      );
+      if (
+        this.circuitHalfOpenCallSuccessCount >=
+        config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
+      ) {
+        console.log(
+          "Closing Circuit as test calls during half open circuit succeded"
+        );
+        this.closeCircuit();
+      }
+    }
+  }
+
+  postFireFailureRoutine(isHalfOpenCheckCall) {
+    this.totalFailedCallsCount++;
+    if (this.isCircuitHalfOpen && isHalfOpenCheckCall) {
+      console.log("opening circuit due to failure during half open test call");
+      this.openCircuit();
+      return;
+    }
+    this.failedCallsCount++;
+    if (this.failedCallsCount >= config.FAILURE_THRESHOLD) {
+      console.log("opening circuit due to threshold cross");
+      this.openCircuit();
+    }
+  }
+
+  async fire(...params) {
+    const isHalfOpenCheckCall = this.preFireRoutine();
+
     try {
       const resp = await this._action(...params);
-      this.totalSuccessCallsCount++;
-      if (this.isCircuitHalfOpen && isHalfOpenCheckCall) {
-        this.circuitHalfOpenCallSuccessCount++;
-        console.log(
-          "Test call during half open circuit succeeded",
-          this.circuitHalfOpenCallSuccessCount
-        );
-        if (
-          this.circuitHalfOpenCallSuccessCount >=
-          config.HALF_OPEN_ALLOWED_CONNECTION_COUNT
-        ) {
-          console.log(
-            "Closing Circuit as test calls during half open circuit succeded"
-          );
-          this.closeCircuit();
-        }
-      }
+      this.postFireSuccessRoutine(isHalfOpenCheckCall);
       return resp;
     } catch (e) {
-      this.handleFailure();
+      this.postFireFailureRoutine(isHalfOpenCheckCall);
       throw e;
     }
   }
