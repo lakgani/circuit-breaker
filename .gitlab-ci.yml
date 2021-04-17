@@ -20,4 +20,4 @@ lint-job:
 test-job:
   stage: test
   script:
-    - npm run test
+    - npm run ci-cd:test
