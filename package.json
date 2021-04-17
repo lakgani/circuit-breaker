@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint .",
     "load-test": "node TestCircuitBreaker.js",
     "test": "jest --watch",
     "ci-cd:test": "jest"

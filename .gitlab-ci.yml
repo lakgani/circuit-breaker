@@ -1,8 +1,22 @@
 default:
     image: node:14-buster
 
+stages:
+    - npm-install
+    - lint
+    - test
+
+build-job:
+  stage: npm-install
+  script:
+    - npm install
+
+lint-job:
+  stage: lint
+  script:
+    - npm run lint
+
 test-job:
   stage: test
   script:
-    - npm install
-    - npm run ci-cd:test
+    - npm run test
