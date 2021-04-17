@@ -43,6 +43,10 @@ class CircuitBreaker {
   closeCircuit() {
     this.isCircuitOpen = false;
     this.failedCallsCount = 0;
+
+    this.isCircuitHalfOpen = false;
+    this.circuitHalfOpenCallCount = 0;
+    this.circuitHalfOpenCallSuccessCount = 0;
     clearInterval(this.circuitHalfOpenResetTimer);
   }
 
@@ -118,12 +122,6 @@ class CircuitBreaker {
   showStatistics() {
     console.log(
       `Total calls: ${this.totalCallsCount} \t\t | Total Successful Calls: ${this.totalSuccessCallsCount} \t\t | Total Failures: ${this.totalFailedCallsCount}`
-    );
-    console.log(
-      `Current period Failures: ${this.failedCallsCount}  \t\t | Circuit Open: ${this.isCircuitOpen}`
-    );
-    console.log(
-      `Circuit half open: ${this.isCircuitHalfOpen}  \t\t | Cicuit Half Open Calls: ${this.circuitHalfOpenCallCount} \t\t | Cicuit Half Open Calls Success: ${this.circuitHalfOpenCallSuccessCount}`
     );
   }
 }
